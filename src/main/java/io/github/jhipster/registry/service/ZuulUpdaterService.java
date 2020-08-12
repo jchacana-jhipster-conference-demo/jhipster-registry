@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -55,9 +56,9 @@ public class ZuulUpdaterService {
                 String url = instanceInfos.getHomePageUrl();
                 log.debug("Checking instance {} - {} ", instanceId, url);
 
-                ZuulRouteDTO route = new ZuulRouteDTO(instanceId,
+                ZuulRouteDTO route = new ZuulRouteDTO(instanceId, "/" +
                     application.getName().toLowerCase() + "/" + instanceId + "/**",
-                    null, url, zuulProperties.isStripPrefix(), zuulProperties.getRetryable(), null,
+                    null, url, zuulProperties.isStripPrefix(), zuulProperties.getRetryable(), Collections.emptySet(),
                     instanceInfos.getStatus().toString());
 
                 if (zuulProperties.getRoutes().containsKey(instanceId)) {

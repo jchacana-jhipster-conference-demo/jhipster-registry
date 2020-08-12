@@ -1,13 +1,21 @@
 import { Injectable } from '@angular/core';
-import { Http, Response } from '@angular/http';
-import { Observable } from 'rxjs/Rx';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-@Injectable()
-export class JhiHistoryService {
+export interface EurekaHistory {
+  canceled: History;
+  registered: History;
+}
 
-    constructor(private http: Http) {}
+export type History = { [key in number]?: string };
 
-    findAll(): Observable<any> {
-        return this.http.get('api/eureka/lastn').map((res: Response) => res.json());
-    }
+export type EurekaHistoryType = 'registered' | 'canceled';
+
+@Injectable({ providedIn: 'root' })
+export class HistoryService {
+  constructor(private http: HttpClient) {}
+
+  findAll(): Observable<EurekaHistory> {
+    return this.http.get<EurekaHistory>('api/eureka/lastn');
+  }
 }

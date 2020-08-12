@@ -1,117 +1,98 @@
 const webpack = require('webpack');
-const CommonsChunkPlugin = require('webpack/lib/optimize/CommonsChunkPlugin');
+const { BaseHrefWebpackPlugin } = require('base-href-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const StringReplacePlugin = require('string-replace-webpack-plugin');
-const AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin');
-const WebpackNotifierPlugin = require('webpack-notifier');
-const path = require('path');
+const AngularCompilerPlugin = require('@ngtools/webpack').AngularCompilerPlugin;
 
-module.exports = function (options) {
-    const DATAS = {
-        VERSION: JSON.stringify(require("../package.json").version),
-        DEBUG_INFO_ENABLED: options.env === 'dev'
-    };
-    return {
-        entry: {
-            'polyfills': './src/main/webapp/app/polyfills',
-            'global': './src/main/webapp/content/scss/global.scss',
-            'main': './src/main/webapp/app/app.main'
-        },
-        resolve: {
-            extensions: ['.ts', '.js'],
-            modules: ['node_modules']
-        },
-        module: {
-            rules: [
-                { test: /bootstrap\/dist\/js\/umd\//, loader: 'imports-loader?jQuery=jquery' },
-                {
-                    test: /\.ts$/,
-                    loaders: [
-                        'angular2-template-loader',
-                        'awesome-typescript-loader'
-                    ],
-                    exclude: ['node_modules/generator-jhipster']
+const utils = require('./utils.js');
+
+module.exports = (options) => ({
+    resolve: {
+        extensions: ['.ts', '.js'],
+        modules: ['node_modules'],
+        mainFields: [ 'es2015', 'browser', 'module', 'main'],
+        alias: utils.mapTypescriptAliasToWebpackAlias()
+    },
+    stats: {
+        children: false
+    },
+    module: {
+        rules: [
+            {
+                test: /(?:\.ngfactory\.js|\.ngstyle\.js|\.ts)$/,
+                loader: '@ngtools/webpack'
+            },
+            {
+                test: /\.html$/,
+                loader: 'html-loader',
+                options: {
+                    minimize: true,
+                    caseSensitive: true,
+                    removeAttributeQuotes:false,
+                    minifyJS:false,
+                    minifyCSS:false
                 },
-                {
-                    test: /\.html$/,
-                    loader: 'html-loader',
-                    options: {
-                        minimize: true,
-                        caseSensitive: true,
-                        removeAttributeQuotes:false,
-                        minifyJS:false,
-                        minifyCSS:false
-                    },
-                    exclude: ['./src/main/webapp/index.html']
-                },
-                {
-                    test: /\.scss$/,
-                    loaders: ['to-string-loader', 'css-loader', 'sass-loader'],
-                    exclude: /(vendor\.scss|global\.scss)/
-                },
-                {
-                    test: /(vendor\.scss|global\.scss)/,
-                    loaders: ['style-loader', 'css-loader', 'postcss-loader', 'sass-loader']
-                },
-                {
-                    test: /\.css$/,
-                    loaders: ['to-string-loader', 'css-loader'],
-                    exclude: /(vendor\.css|global\.css)/
-                },
-                {
-                    test: /(vendor\.css|global\.css)/,
-                    loaders: ['style-loader', 'css-loader']
-                },
-                {
-                    test: /\.(jpe?g|png|gif|svg|woff2?|ttf|eot)$/i,
-                    loaders: ['file-loader?hash=sha512&digest=hex&name=[hash].[ext]']
-                },
-                {
-                    test: /app.constants.ts$/,
-                    loader: StringReplacePlugin.replace({
-                        replacements: [{
-                            pattern: /\/\* @toreplace (\w*?) \*\//ig,
-                            replacement: function (match, p1, offset, string) {
-                                return `_${p1} = ${DATAS[p1]};`;
-                            }
-                        }]
-                    })
+                exclude: /(src\/main\/webapp\/index.html)/
+            },
+            {
+                test: /\.(jpe?g|png|gif|svg|woff2?|ttf|eot)$/i,
+                loader: 'file-loader',
+                options: {
+                    digest: 'hex',
+                    hash: 'sha512',
+                    // For fixing src attr of image
+                    // See https://github.com/jhipster/generator-jhipster/issues/11209
+                    name: 'content/[hash].[ext]',
+                    esModule: false
                 }
-            ]
-        },
-        plugins: [
-            new CommonsChunkPlugin({
-                names: ['manifest', 'polyfills'].reverse()
-            }),
-            new webpack.DllReferencePlugin({
-                context: './',
-                manifest: require(path.resolve('./target/www/vendor.json'))
-            }),
-            new CopyWebpackPlugin([
-                { from: './node_modules/core-js/client/shim.min.js', to: 'core-js-shim.min.js' },
-                { from: './node_modules/swagger-ui/dist', to: 'swagger-ui/dist' },
-                { from: './src/main/webapp/swagger-ui/', to: 'swagger-ui' },
-                { from: './src/main/webapp/favicon.ico', to: 'favicon.ico' },
-                { from: './src/main/webapp/robots.txt', to: 'robots.txt' }
-            ]),
-            new webpack.ProvidePlugin({
-                $: "jquery",
-                jQuery: "jquery"
-            }),
-            new HtmlWebpackPlugin({
-                template: './src/main/webapp/index.html',
-                chunksSortMode: 'dependency',
-                inject: 'body'
-            }),
-            new AddAssetHtmlPlugin([
-                { filepath: path.resolve('./target/www/vendor.dll.js'), includeSourcemap: false }
-            ]),
-            new StringReplacePlugin(),
-            new WebpackNotifierPlugin({
-                title: 'JHipster',
-                contentImage: path.join(__dirname, 'logo-jhipster.png')
-            })
+            },
+            {
+                test: /manifest.webapp$/,
+                loader: 'file-loader',
+                options: {
+                    name: 'manifest.webapp'
+                }
+            },
+            // Ignore warnings about System.import in Angular
+            { test: /[\/\\]@angular[\/\\].+\.js$/, parser: { system: true } },
         ]
-    };
-};
+    },
+    plugins: [
+        new webpack.DefinePlugin({
+            'process.env': {
+                NODE_ENV: `'${options.env}'`,
+                BUILD_TIMESTAMP: `'${new Date().getTime()}'`,
+                // APP_VERSION is passed as an environment variable from the Gradle / Maven build tasks.
+                VERSION: `'${process.env.hasOwnProperty('APP_VERSION') ? process.env.APP_VERSION : 'DEV'}'`,
+                DEBUG_INFO_ENABLED: options.env === 'development',
+                // The root URL for API calls, ending with a '/' - for example: `"https://www.jhipster.tech:8081/myservice/"`.
+                // If this URL is left empty (""), then it will be relative to the current context.
+                // If you use an API server, in `prod` mode, you will need to enable CORS
+                // (see the `jhipster.cors` common JHipster property in the `application-*.yml` configurations)
+                SERVER_API_URL: `''`
+            }
+        }),
+        new CopyWebpackPlugin([
+            { from: './node_modules/swagger-ui-dist/*.{js,css,html,png}', to: 'swagger-ui', flatten: true, ignore: ['index.html'] },
+            { from: './node_modules/axios/dist/axios.min.js', to: 'swagger-ui' },
+            { from: './src/main/webapp/swagger-ui/', to: 'swagger-ui' },
+            { from: './src/main/webapp/content/', to: 'content' },
+            { from: './src/main/webapp/favicon.ico', to: 'favicon.ico' },
+            { from: './src/main/webapp/manifest.webapp', to: 'manifest.webapp' },
+            // jhipster-needle-add-assets-to-webpack - JHipster will add/remove third-party resources in this array
+            { from: './src/main/webapp/robots.txt', to: 'robots.txt' }
+        ]),
+        new HtmlWebpackPlugin({
+            template: './src/main/webapp/index.html',
+            chunks: ['polyfills', 'main', 'global'],
+            chunksSortMode: 'manual',
+            inject: 'body'
+        }),
+        new BaseHrefWebpackPlugin({ baseHref: '/' }),
+        new AngularCompilerPlugin({
+            mainPath: utils.root('src/main/webapp/app/app.main.ts'),
+            tsConfigPath: utils.root('tsconfig.app.json'),
+            sourceMap: true
+        })
+    ]
+});

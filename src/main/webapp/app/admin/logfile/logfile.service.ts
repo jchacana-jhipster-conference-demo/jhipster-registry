@@ -1,23 +1,22 @@
 import { Injectable } from '@angular/core';
-import { Http, Response } from '@angular/http';
-import { Observable } from 'rxjs/Rx';
-import { Route } from '../../shared';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Route } from 'app/shared/routes/route.model';
 
-@Injectable()
-export class JhiLogfileService {
+@Injectable({ providedIn: 'root' })
+export class LogfileService {
+  constructor(private http: HttpClient) {}
 
-    constructor(private http: Http) { }
+  // get the Registry's logfile
+  getLogfile(): Observable<string> {
+    return this.http.get('management/logfile', { responseType: 'text' });
+  }
 
-    // get the Registry's logfile
-    getLogfile(): Observable<any> {
-        return this.http.get('management/logfile').map((res: Response) => res.text());
+  // get the instance's logfile
+  getInstanceLogfile(instance: Route | undefined): Observable<string> {
+    if (instance && instance.prefix && instance.prefix.length > 0) {
+      return this.http.get(instance.prefix + '/management/logfile', { responseType: 'text' });
     }
-
-    // get the instance's logfile
-    getInstanceLogfile(instance: Route): Observable<any> {
-        if (instance && instance.prefix && instance.prefix.length > 0) {
-            return this.http.get(instance.prefix + '/management/logfile').map((res: Response) => res.text());
-        }
-        return this.getLogfile();
-    }
+    return this.getLogfile();
+  }
 }

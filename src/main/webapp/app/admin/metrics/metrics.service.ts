@@ -1,35 +1,40 @@
 import { Injectable } from '@angular/core';
-import { Http, Response } from '@angular/http';
-import { Observable } from 'rxjs/Rx';
-import { Route } from '../../shared';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-@Injectable()
-export class JhiMetricsService {
+import { SERVER_API_URL } from 'app/app.constants';
+import { Route } from 'app/shared/routes/route.model';
 
-    constructor(private http: Http) {}
+export type MetricsKey = 'jvm' | 'http.server.requests' | 'cache' | 'services' | 'databases' | 'garbageCollector' | 'processMetrics';
+export type Metrics = { [key in MetricsKey]: any };
+export type Thread = any;
+export type ThreadDump = { threads: Thread[] };
 
-    // get the Registry's metrics
-    getMetrics(): Observable<any> {
-        return this.http.get('management/metrics').map((res: Response) => res.json());
+@Injectable({ providedIn: 'root' })
+export class MetricsService {
+  constructor(private http: HttpClient) {}
+
+  // get the Registry's metrics
+  getMetrics(): Observable<Metrics> {
+    return this.http.get<Metrics>(SERVER_API_URL + 'management/jhimetrics');
+  }
+
+  // get the instance's metrics
+  getInstanceMetrics(instance: Route | undefined): Observable<Metrics> {
+    if (instance && instance.prefix && instance.prefix.length > 0) {
+      return this.http.get<Metrics>(SERVER_API_URL + instance.prefix + '/management/jhimetrics');
     }
+    return this.getMetrics();
+  }
 
-    // get the instance's metrics
-    getInstanceMetrics(instance: Route): Observable<any> {
-        if (instance && instance.prefix && instance.prefix.length > 0) {
-            return this.http.get((instance.prefix + '/management/metrics')).map((res: Response) => res.json());
-        }
-        return this.getMetrics();
+  threadDump(): Observable<ThreadDump> {
+    return this.http.get<ThreadDump>(SERVER_API_URL + 'management/threaddump');
+  }
+
+  instanceThreadDump(instance: Route | undefined): Observable<ThreadDump> {
+    if (instance && instance.prefix && instance.prefix.length > 0) {
+      return this.http.get<ThreadDump>(SERVER_API_URL + instance.prefix + '/management/threaddump');
     }
-
-    threadDump(): Observable<any> {
-        return this.http.get('management/dump').map((res: Response) => res.json());
-    }
-
-    instanceThreadDump(instance: Route): Observable<any> {
-        if (instance && instance.prefix && instance.prefix.length > 0) {
-            return this.http.get((instance.prefix + '/management/dump')).map((res: Response) => res.json());
-        }
-        return this.threadDump();
-    }
-
+    return this.threadDump();
+  }
 }

@@ -1,22 +1,21 @@
 package io.github.jhipster.registry;
 
 import io.github.jhipster.registry.config.ApplicationProperties;
-import io.github.jhipster.registry.config.DefaultProfileUtil;
 
+import io.github.jhipster.config.DefaultProfileUtil;
 import io.github.jhipster.config.JHipsterConstants;
 
+import io.github.jhipster.registry.config.ConfigServerConfig;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.actuate.autoconfigure.*;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.config.server.EnableConfigServer;
 import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
@@ -25,12 +24,10 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
 
-@SpringBootApplication
 @EnableEurekaServer
 @EnableConfigServer
-@ComponentScan
-@EnableAutoConfiguration(exclude = {MetricFilterAutoConfiguration.class, MetricRepositoryAutoConfiguration.class, MetricsDropwizardAutoConfiguration.class})
-@EnableConfigurationProperties({ApplicationProperties.class})
+@SpringBootApplication
+@EnableConfigurationProperties({ApplicationProperties.class, ConfigServerConfig.class})
 @EnableDiscoveryClient
 @EnableZuulProxy
 public class JHipsterRegistryApp {
@@ -46,9 +43,9 @@ public class JHipsterRegistryApp {
     /**
      * Initializes JHipsterRegistry.
      * <p>
-     * Spring profiles can be configured with a program arguments --spring.profiles.active=your-active-profile
+     * Spring profiles can be configured with a program argument --spring.profiles.active=your-active-profile
      * <p>
-     * You can find more information on how profiles work with JHipster on <a href="http://www.jhipster.tech/profiles/">http://www.jhipster.tech/profiles/</a>.
+     * You can find more information on how profiles work with JHipster on <a href="https://www.jhipster.tech/profiles/">https://www.jhipster.tech/profiles/</a>.
      */
     @PostConstruct
     public void initApplication() {
@@ -58,7 +55,7 @@ public class JHipsterRegistryApp {
                 "with both the 'dev' and 'prod' profiles at the same time.");
         }
         if (activeProfiles.contains(JHipsterConstants.SPRING_PROFILE_DEVELOPMENT) && activeProfiles.contains(JHipsterConstants.SPRING_PROFILE_CLOUD)) {
-            log.error("You have misconfigured your application! It should not" +
+            log.error("You have misconfigured your application! It should not " +
                 "run with both the 'dev' and 'cloud' profiles at the same time.");
         }
     }
@@ -66,42 +63,51 @@ public class JHipsterRegistryApp {
     /**
      * Main method, used to run the application.
      *
-     * @param args the command line arguments
-     * @throws UnknownHostException if the local host name could not be resolved into an address
+     * @param args the command line arguments.
      */
-    public static void main(String[] args) throws UnknownHostException {
+    public static void main(String[] args) {
         SpringApplication app = new SpringApplication(JHipsterRegistryApp.class);
         DefaultProfileUtil.addDefaultProfile(app);
         Environment env = app.run(args).getEnvironment();
+        logApplicationStartup(env);
+    }
+
+    private static void logApplicationStartup(Environment env) {
         String protocol = "http";
         if (env.getProperty("server.ssl.key-store") != null) {
             protocol = "https";
         }
+        String serverPort = env.getProperty("server.port");
+        String contextPath = env.getProperty("server.servlet.context-path");
+        if (StringUtils.isBlank(contextPath)) {
+            contextPath = "/";
+        }
+        String hostAddress = "localhost";
+        try {
+            hostAddress = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            log.warn("The host name could not be determined, using `localhost` as fallback");
+        }
         log.info("\n----------------------------------------------------------\n\t" +
                 "Application '{}' is running! Access URLs:\n\t" +
-                "Local: \t\t{}://localhost:{}\n\t" +
-                "External: \t{}://{}:{}\n\t" +
+                "Local: \t\t{}://localhost:{}{}\n\t" +
+                "External: \t{}://{}:{}{}\n\t" +
                 "Profile(s): \t{}\n----------------------------------------------------------",
             env.getProperty("spring.application.name"),
             protocol,
-            env.getProperty("server.port"),
+            serverPort,
+            contextPath,
             protocol,
-            InetAddress.getLocalHost().getHostAddress(),
-            env.getProperty("server.port"),
+            hostAddress,
+            serverPort,
+            contextPath,
             env.getActiveProfiles());
 
-        String secretKey = env.getProperty("jhipster.security.authentication.jwt.secret");
-        if (secretKey == null ) {
-            log.error("\n----------------------------------------------------------\n" +
-                "Your JWT secret key is not set up, you will not be able to log into the JHipster.\n"+
-                "Please read the documentation at http://www.jhipster.tech/jhipster-registry/\n" +
-                "----------------------------------------------------------");
-        } else if (secretKey.equals("this-secret-should-not-be-used-read-the-comment")) {
-            log.error("\n----------------------------------------------------------\n" +
-                "Your JWT secret key is not configured using Spring Cloud Config, you will not be able to \n"+
-                "use the JHipster Registry dashboards to monitor external applications. \n" +
-                "Please read the documentation at http://www.jhipster.tech/jhipster-registry/\n" +
-                "----------------------------------------------------------");
+        String configServerStatus = env.getProperty("configserver.status");
+        if (configServerStatus == null) {
+            configServerStatus = "Not found or not setup for this application";
         }
+        log.info("\n----------------------------------------------------------\n\t" +
+                "Config Server: \t{}\n----------------------------------------------------------", configServerStatus);
     }
 }

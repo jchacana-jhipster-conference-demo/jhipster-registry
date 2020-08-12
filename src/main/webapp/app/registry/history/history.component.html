@@ -6,12 +6,12 @@
 
     <div class="panel panel-default">
         <div class="panel-body">
-            <ngb-tabset activeId="registered" (tabChange)="beforeChange($event)">
+            <ngb-tabset activeId="registered" (tabChange)="beforeChange($event)" type="pills">
                 <ngb-tab id="registered" title="Last registered leases">
-                    <template ngbTabContent></template>
+                    <ng-template ngbTabContent></ng-template>
                 </ngb-tab>
                 <ngb-tab id="canceled" title="Last canceled leases">
-                    <template ngbTabContent></template>
+                    <ng-template ngbTabContent></ng-template>
                 </ngb-tab>
             </ngb-tabset>
             <div class="table-responsive">
@@ -22,13 +22,13 @@
                         <th>Instance</th>
                     </tr>
                     </thead>
-                    <tbody *ngIf="items">
-                    <tr *ngFor="let instance of items">
+                    <tbody *ngIf="histories">
+                    <tr *ngFor="let history of (histories | keys | orderBy:'key':false)">
                         <td>
-                            {{instance.key | date:'medium'}}
+                            {{history.key | date:'medium'}}
                         </td>
                         <td>
-                            {{instance.value}}
+                            {{history.value}}
                         </td>
                     </tr>
                     </tbody>

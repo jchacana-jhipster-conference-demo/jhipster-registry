@@ -1,28 +1,68 @@
+import { DatePipe } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NgModule } from '@angular/core';
-import { MockBackend } from '@angular/http/testing';
-import { Http, BaseRequestOptions } from '@angular/http';
-import { SessionStorageService } from 'ng2-webstorage';
-import { JhiRefreshService } from '../../../main/webapp/app/shared/refresh/refresh.service';
-import { LoginOAuth2Service } from '../../../main/webapp/app/shared/oauth2/login-oauth2.service';
-import { AuthSessionServerProvider } from '../../../main/webapp/app/shared/auth/auth-session.service';
-import { ProfileService } from '../../../main/webapp/app/layouts/profiles/profile.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { JhiDataUtils, JhiDateUtils, JhiEventManager, JhiAlertService, JhiParseLinks } from 'ng-jhipster';
+
+import { AccountService } from 'app/core/auth/account.service';
+import { LoginModalService } from 'app/core/login/login-modal.service';
+import { MockAccountService } from './helpers/mock-account.service';
+import { MockActivatedRoute, MockRouter } from './helpers/mock-route.service';
+import { MockActiveModal } from './helpers/mock-active-modal.service';
+import { MockEventManager } from './helpers/mock-event-manager.service';
+import { SessionStorageService } from 'ngx-webstorage';
+import { StateStorageService } from 'app/core/auth/state-storage.service';
+import { MockStateStorageService } from './helpers/mock-state-storage.service';
+import { MockSessionStorageService } from './helpers/mock-session-storage.service';
 
 @NgModule({
-    providers: [
-        MockBackend,
-        SessionStorageService,
-        JhiRefreshService,
-        LoginOAuth2Service,
-        AuthSessionServerProvider,
-        ProfileService,
-        BaseRequestOptions,
-        {
-            provide: Http,
-            useFactory: (backendInstance: MockBackend, defaultOptions: BaseRequestOptions) => {
-                return new Http(backendInstance, defaultOptions);
-            },
-            deps: [MockBackend, BaseRequestOptions]
-        }
-    ]
+  providers: [
+    DatePipe,
+    JhiDataUtils,
+    JhiDateUtils,
+    JhiParseLinks,
+    {
+      provide: JhiEventManager,
+      useClass: MockEventManager
+    },
+    {
+      provide: NgbActiveModal,
+      useClass: MockActiveModal
+    },
+    {
+      provide: ActivatedRoute,
+      useValue: new MockActivatedRoute({ id: 123 })
+    },
+    {
+      provide: Router,
+      useClass: MockRouter
+    },
+    {
+      provide: AccountService,
+      useClass: MockAccountService
+    },
+    {
+      provide: LoginModalService,
+      useValue: null
+    },
+    {
+      provide: JhiAlertService,
+      useValue: null
+    },
+    {
+      provide: NgbModal,
+      useValue: null
+    },
+    {
+      provide: SessionStorageService,
+      useClass: MockSessionStorageService
+    },
+    {
+      provide: StateStorageService,
+      useClass: MockStateStorageService
+    }
+  ],
+  imports: [HttpClientTestingModule]
 })
 export class JHipsterRegistryTestModule {}

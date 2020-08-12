@@ -1,27 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Http, Response } from '@angular/http';
-import { Observable } from 'rxjs/Rx';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-@Injectable()
-export class JhiConfigService {
+@Injectable({ providedIn: 'root' })
+export class ConfigService {
+  constructor(private http: HttpClient) {}
 
-    constructor(private http: Http) {}
+  getConfigAsYaml(application: string, profile: string, label: string): Observable<string> {
+    return this.http.get('config/' + label + '/' + application + '-' + profile + '.yml', { responseType: 'text' });
+  }
 
-    getConfigAsYaml(application: string, profile: string, label: string): Observable<any> {
-        return this.http.get('config/' + label + '/' + application + '-' + profile + '.yml').map((response: Response) => {
-            return response.text();
-        });
-    }
+  getConfigAsProperties(application: string, profile: string, label: string): Observable<string> {
+    return this.http.get('config/' + label + '/' + application + '-' + profile + '.properties', { responseType: 'text' });
+  }
 
-    getConfigAsProperties(application: string, profile: string, label: string): Observable<any> {
-        return this.http.get('config/' + label + '/' + application + '-' + profile + '.properties').map((response: Response) => {
-            return response.text();
-        });
-    }
-
-    getConfigAsJson(application: string, profile: string, label: string): Observable<any> {
-        return this.http.get('config/' + label + '/' + application + '-' + profile + '.json').map((response: Response) => {
-            return response.text();
-        });
-    }
+  getConfigAsJson(application: string, profile: string, label: string): Observable<string> {
+    return this.http.get('config/' + label + '/' + application + '-' + profile + '.json', { responseType: 'text' });
+  }
 }
